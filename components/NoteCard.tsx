@@ -26,9 +26,12 @@ export default function NoteCard({ note }: { note: any }) {
       {/* Footer: cheers + View threads */}
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
-        <a href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
-          View threads →
-        </a>
+import Link from 'next/link';
+// … and inside the JSX:
+<Link href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
+  View threads →
+</Link>
+
       </div>
     </div>
   );
