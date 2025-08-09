@@ -20,23 +20,19 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('notes')
-      .select(
-        'id,user_id,type,content,tags,created_at, profiles(name,handle,avatar_url)'
-      )
-      .order('created_at', { ascending: false })
-      .limit(50);
+  const { data, error } = await supabase
+    .from('notes')
+    .select('id,user_id,type,content,tags,created_at, profiles(name,handle,avatar_url)')
+    .order('created_at', { ascending: false })
+    .limit(50);
 
-    if (error) {
-      console.error(error);
-      setNotes([]);
-    } else {
-      setNotes((data as Note[]) || []);
-    }
-    setLoading(false);
+  if (error) {
+    console.error(error);
+    setNotes([]);
+  } else {
+    setNotes(data || []);
   }
+}
 
   useEffect(() => {
     load();
