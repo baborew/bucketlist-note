@@ -6,8 +6,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient";
 
 // If you already have a central supabase client (e.g., lib/supabaseClient.ts),
 // replace this with: `import { supabase } from "../lib/supabaseClient";`
@@ -159,10 +159,6 @@ function DotsIcon() {
 
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl2 = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey2 = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase2 = createClient(supabaseUrl2, supabaseAnonKey2);
 
 export function EditModal({
   post,
