@@ -6,8 +6,8 @@ import NoteCard from '../../components/NoteCard';
 import FollowButton from '../../components/FollowButton';
 
 export default function Profile() {
-  const { query } = useRouter();
-  const id = query.id as string | undefined;
+  const router = useRouter();
+  const id = router.query.id as string | undefined;
   const [profile, setProfile] = useState<any>(null);
   const [notes, setNotes] = useState<any[]>([]);
 
@@ -33,7 +33,7 @@ export default function Profile() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xl font-semibold">{profile?.name || 'User'}</div>
-            <div className="text-sm text-gray-600">@{profile?.handle || id.slice(0,8)}</div>
+            <div className="text-sm text-gray-600">@{profile?.handle || id.slice(0, 8)}</div>
             {profile?.bio && <p className="mt-2">{profile.bio}</p>}
           </div>
           <FollowButton userId={id} />
@@ -43,7 +43,7 @@ export default function Profile() {
       {notes.length === 0 ? (
         <div className="text-sm text-gray-600">No threads yet.</div>
       ) : (
-        notes.map(n => <NoteCard key={n.id} note={n} />)
+        notes.map((n) => <NoteCard key={n.id} note={n} />)
       )}
     </div>
   );
