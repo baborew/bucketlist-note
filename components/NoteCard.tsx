@@ -36,7 +36,7 @@ export default function NoteCard({
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
         {showThreadLink && (
-          <Link href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
+          <Link href={`/n/${note.id}`} className="text-sm text-blue-700">
             View threads →
           </Link>
         )}
