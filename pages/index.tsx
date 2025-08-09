@@ -5,10 +5,11 @@ import NoteCard from '../components/NoteCard';
 export default function Home() {
   const [notes, setNotes] = useState<any[]>([]);
   async function load() {
-    const { data, error } = await supabase
-      .from('notes').select('*').eq('privacy', 'public')
-      .order('created_at', { ascending: false }).limit(50);
-    if (!error) setNotes(data || []);
+    const { data: notes } = await supabase
+      .from('notes')
+      .select('id,user_id,type,content,tags,created_at, profiles(name,handle,avatar_url)')
+      .order('created_at', { ascending: false })
+      .limit(50);
   }
   useEffect(() => {
     load();
