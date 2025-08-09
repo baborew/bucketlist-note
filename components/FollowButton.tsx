@@ -7,7 +7,6 @@ export default function FollowButton({ userId }: { userId: string }) {
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Check if I'm following this user
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -23,28 +22,22 @@ export default function FollowButton({ userId }: { userId: string }) {
     })();
   }, [userId]);
 
-  // Don't show button if I'm not signed in or it's my own profile
-  if (!me || me === userId) return null;
+  if (!me || me === userId) return null; // hide if not signed in or it’s me
 
-  async function toggleFollow() {
+  async function toggle() {
     if (busy) return;
     setBusy(true);
     try {
       if (following) {
-        await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', me)
-          .eq('followed_id', userId);
+        await supabase.from('follows').delete()
+          .eq('follower_id', me).eq('followed_id', userId);
         setFollowing(false);
       } else {
-        await supabase
-          .from('follows')
-          .insert({ follower_id: me, followed_id: userId });
+        await supabase.from('follows').insert({ follower_id: me, followed_id: userId });
         setFollowing(true);
       }
-    } catch (err: any) {
-      alert(err.message || 'Something went wrong');
+    } catch (e: any) {
+      alert(e.message || 'Follow failed');
     } finally {
       setBusy(false);
     }
@@ -52,7 +45,7 @@ export default function FollowButton({ userId }: { userId: string }) {
 
   return (
     <button
-      onClick={toggleFollow}
+      onClick={toggle}
       disabled={busy}
       className={`px-3 py-1 border rounded text-sm ${following ? 'bg-gray-100' : ''}`}
     >
