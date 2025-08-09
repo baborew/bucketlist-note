@@ -1,3 +1,4 @@
+// components/FollowButton.tsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
@@ -6,6 +7,7 @@ export default function FollowButton({ userId }: { userId: string }) {
   const [following, setFollowing] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Check if I'm following this user
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -21,29 +23,28 @@ export default function FollowButton({ userId }: { userId: string }) {
     })();
   }, [userId]);
 
-  if (!me || me === userId) return null; // not signed in or it's me
+  // Don't show button if I'm not signed in or it's my own profile
+  if (!me || me === userId) return null;
 
-  async function toggle() {
+  async function toggleFollow() {
     if (busy) return;
     setBusy(true);
     try {
       if (following) {
-        const { error } = await supabase
+        await supabase
           .from('follows')
           .delete()
           .eq('follower_id', me)
           .eq('followed_id', userId);
-        if (error) throw error;
         setFollowing(false);
       } else {
-        const { error } = await supabase
+        await supabase
           .from('follows')
           .insert({ follower_id: me, followed_id: userId });
-        if (error) throw error;
         setFollowing(true);
       }
-    } catch (e: any) {
-      alert(e.message || 'Follow action failed');
+    } catch (err: any) {
+      alert(err.message || 'Something went wrong');
     } finally {
       setBusy(false);
     }
@@ -51,10 +52,9 @@ export default function FollowButton({ userId }: { userId: string }) {
 
   return (
     <button
-      onClick={toggle}
+      onClick={toggleFollow}
       disabled={busy}
       className={`px-3 py-1 border rounded text-sm ${following ? 'bg-gray-100' : ''}`}
-      title={following ? 'Unfollow' : 'Follow'}
     >
       {following ? 'Following' : 'Follow'}
     </button>
