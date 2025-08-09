@@ -19,7 +19,9 @@ export default function NoteCard({ note }: { note: any }) {
       {!!(note.tags && note.tags.length) && (
         <div className="mt-2 flex flex-wrap gap-2">
           {note.tags.map((tag: string) => (
-            <span key={tag} className="text-xs bg-gray-200 px-2 py-1 rounded">#{tag}</span>
+            <span key={tag} className="text-xs bg-gray-200 px-2 py-1 rounded">
+              #{tag}
+            </span>
           ))}
         </div>
       )}
@@ -27,12 +29,9 @@ export default function NoteCard({ note }: { note: any }) {
       {/* Footer: cheers + View threads */}
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
-import Link from 'next/link';
-// … and inside the JSX:
-<Link href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
-  View threads →
-</Link>
-
+        <Link href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
+          View threads →
+        </Link>
       </div>
     </div>
   );
