@@ -1,94 +1,90 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabaseClient';
 
+type Profile = { id: string; handle?: string; name?: string; bio?: string; location?: string } | null;
+
 export default function AuthGate({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const router = useRouter();
+  const [profile, setProfile] = useState<Profile>(null);
+  const [checking, setChecking] = useState(true); // no more blank page
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
+    let unsub: any;
 
-      if (data.session) {
-        const uid = data.session.user.id;
+    async function init() {
+      try {
+        // get session
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
 
-        // Ensure a profile row exists
-        await supabase.from('profiles').upsert({ id: uid });
+        if (data.session) {
+          const uid = data.session.user.id;
 
-        // Load profile
-        const { data: p } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', uid)
-          .maybeSingle();
+          // ensure a profile row exists (prevents FK errors)
+          await supabase.from('profiles').upsert({ id: uid });
 
-        setProfile(p || null);
-
-        // Onboarding: if missing basic info, nudge to /me
-        if (!p?.handle || !p?.name) {
-          if (router.pathname !== '/me') router.push('/me');
+          // load profile (non-blocking if it fails)
+          const { data: p } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', uid)
+            .maybeSingle();
+          setProfile((p as any) || null);
         }
+      } catch (e) {
+        console.error('Auth init error', e);
+      } finally {
+        setChecking(false);
       }
-    })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
-      setSession(s);
-      if (s) {
-        const uid = s.user.id;
-        await supabase.from('profiles').upsert({ id: uid });
-        const { data: p } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', uid)
-          .maybeSingle();
-        setProfile(p || null);
-        if (!p?.handle || !p?.name) {
-          if (router.pathname !== '/me') router.push('/me');
+      // listen for auth changes
+      const sub = supabase.auth.onAuthStateChange(async (_e, s) => {
+        setSession(s);
+        if (s) {
+          try {
+            const uid = s.user.id;
+            await supabase.from('profiles').upsert({ id: uid });
+            const { data: p } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', uid)
+              .maybeSingle();
+            setProfile((p as any) || null);
+          } catch (e) {
+            console.error('Auth change error', e);
+          }
+        } else {
+          setProfile(null);
         }
-      } else {
-        setProfile(null);
-      }
-    });
+      });
+      unsub = sub.subscription;
+    }
 
-    return () => sub.subscription.unsubscribe();
-  }, [router]);
+    init();
+    return () => unsub?.unsubscribe?.();
+  }, []);
 
-  if (loading) return null;
-
+  // Header always renders (even while checking)
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between p-4">
         {/* Brand → Home */}
-        <Link href="/" className="font-semibold text-lg">
-          someday
-        </Link>
+        <Link href="/" className="font-semibold text-lg">someday</Link>
 
-        {/* Right side */}
         <div className="flex items-center gap-3">
           {session ? (
             <>
-              {/* Profile button → /me */}
               <Link
                 href="/me"
                 className="inline-flex items-center gap-2 px-3 py-1 border rounded"
                 title="Edit profile"
               >
-                {/* Simple avatar/initial */}
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs">
-                  {(profile?.name || session.user.email || '?')
-                    .trim()[0]
-                    ?.toUpperCase()}
+                  {(profile?.name || session.user?.email || '?')?.trim?.()[0]?.toUpperCase?.() || 'U'}
                 </span>
                 <span className="text-sm">@{profile?.handle || 'profile'}</span>
               </Link>
-
               <button
                 onClick={() => supabase.auth.signOut()}
                 className="px-3 py-1 border rounded"
@@ -112,8 +108,19 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Page content */}
-      <div className="max-w-xl mx-auto">{children}</div>
+      {/* Gentle nudge to complete profile if signed in but missing basics */}
+      {session && !checking && (!profile?.handle || !profile?.name) && (
+        <div className="max-w-xl mx-auto mb-3 px-3">
+          <div className="rounded border bg-yellow-50 p-3 text-sm">
+            Complete your profile to help others find you. <Link href="/me" className="underline">Go to profile →</Link>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-xl mx-auto">
+        {/* While checking auth, still render children so no blank page */}
+        {children}
+      </div>
     </div>
   );
 }
