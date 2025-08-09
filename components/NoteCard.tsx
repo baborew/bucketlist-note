@@ -5,12 +5,9 @@ import CheerButton from './CheerButton';
 export default function NoteCard({ note }: { note: any }) {
   return (
     <div className="p-4 bg-white rounded-xl shadow mb-4">
-      {/* Header: type on the left, Follow on the right */}
+      {/* Header: type + Follow */}
       <div className="flex items-center justify-between">
-        <div className="text-xs uppercase tracking-wide text-gray-500">
-          {note.type}
-        </div>
-        {/* Follow author (button hides itself if it's me or I'm signed out) */}
+        <div className="text-xs uppercase tracking-wide text-gray-500">{note.type}</div>
         <FollowButton userId={note.user_id} />
       </div>
 
@@ -21,18 +18,16 @@ export default function NoteCard({ note }: { note: any }) {
       {!!(note.tags && note.tags.length) && (
         <div className="mt-2 flex flex-wrap gap-2">
           {note.tags.map((tag: string) => (
-            <span key={tag} className="text-xs bg-gray-200 px-2 py-1 rounded">
-              #{tag}
-            </span>
+            <span key={tag} className="text-xs bg-gray-200 px-2 py-1 rounded">#{tag}</span>
           ))}
         </div>
       )}
 
-      {/* Footer: cheers + profile link */}
+      {/* Footer: cheers + View threads */}
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
         <a href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
-          View profile →
+          View threads →
         </a>
       </div>
     </div>
