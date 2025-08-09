@@ -1,4 +1,5 @@
 // pages/profile/[id].tsx
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
@@ -14,8 +15,13 @@ export default function Profile() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const { data: p } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle();
-      setProfile(p);
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      setProfile(p || null);
+
       const { data: ns } = await supabase
         .from('notes')
         .select('*')
@@ -29,6 +35,12 @@ export default function Profile() {
 
   return (
     <div className="p-4 max-w-xl mx-auto">
+      {/* Back to feed */}
+      <div className="mb-3">
+        <Link href="/" className="text-sm text-blue-700">← Back to feed</Link>
+      </div>
+
+      {/* Profile header */}
       <div className="mb-4 bg-white rounded-xl shadow p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -40,10 +52,11 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* Their threads (notes) */}
       {notes.length === 0 ? (
         <div className="text-sm text-gray-600">No threads yet.</div>
       ) : (
-        notes.map((n) => <NoteCard key={n.id} note={n} />)
+        notes.map((n) => <NoteCard key={n.id} note={n} showThreadLink={false} />)
       )}
     </div>
   );
