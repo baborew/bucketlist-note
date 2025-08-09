@@ -1,4 +1,5 @@
 // components/NoteCard.tsx
+import Link from 'next/link';
 import FollowButton from './FollowButton';
 import CheerButton from './CheerButton';
 
