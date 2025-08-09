@@ -6,14 +6,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
 // If you already have a central supabase client (e.g., lib/supabaseClient.ts),
 // replace this with: `import { supabase } from "../lib/supabaseClient";`
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Post = {
   id: string;
