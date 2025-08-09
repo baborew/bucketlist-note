@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import PostActions from "../components/PostActions";
 
 // If you already have a central supabase client (e.g., lib/supabaseClient.ts),
 // replace this with: `import { supabase } from "../lib/supabaseClient";`
