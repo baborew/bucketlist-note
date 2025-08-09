@@ -5,6 +5,7 @@
 // =============================
 "use client";
 
+import { EditModal } from "./EditModal";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
