@@ -17,7 +17,7 @@ export default function NoteThread() {
       // Load the note
       const { data: n } = await supabase
         .from('notes')
-        .select('*')
+        .select('id,user_id,type,content,tags,created_at, profiles(name,handle,avatar_url)')
         .eq('id', id)
         .maybeSingle();
       setNote(n || null);
