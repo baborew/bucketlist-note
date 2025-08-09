@@ -3,7 +3,13 @@ import Link from 'next/link';
 import FollowButton from './FollowButton';
 import CheerButton from './CheerButton';
 
-export default function NoteCard({ note }: { note: any }) {
+export default function NoteCard({
+  note,
+  showThreadLink = true,
+}: {
+  note: any;
+  showThreadLink?: boolean;
+}) {
   return (
     <div className="p-4 bg-white rounded-xl shadow mb-4">
       {/* Header: type + Follow */}
@@ -26,12 +32,14 @@ export default function NoteCard({ note }: { note: any }) {
         </div>
       )}
 
-      {/* Footer: cheers + View threads */}
+      {/* Footer: cheers + link (optional) */}
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
-        <Link href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
-          View threads →
-        </Link>
+        {showThreadLink && (
+          <Link href={`/profile/${note.user_id}`} className="text-sm text-blue-700">
+            View threads →
+          </Link>
+        )}
       </div>
     </div>
   );
