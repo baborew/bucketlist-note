@@ -1,3 +1,4 @@
+import AvatarUploader from '../components/AvatarUploader';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 export default function Me() {
@@ -21,6 +22,7 @@ export default function Me() {
   return (
     <div className="max-w-xl mx-auto p-4 bg-white rounded-xl shadow">
       <h1 className="text-lg font-semibold mb-3">Your profile</h1>
+      <AvatarUploader />
       {['handle','name','bio','location'].map((k) => (
         <input key={k} className="w-full border rounded px-2 py-1 mb-2" placeholder={k}
           value={(form as any)[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
