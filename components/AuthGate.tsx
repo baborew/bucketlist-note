@@ -1,5 +1,5 @@
-// components/AuthGate.tsx
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabaseClient';
 
@@ -16,14 +16,24 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       setLoading(false);
 
       if (data.session) {
-        // ensure profile exists
         const uid = data.session.user.id;
-        await supabase.from('profiles').upsert({ id: uid });
-        const { data: p } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
-        setProfile(p);
 
-        // 🚦 first‑time onboarding: if no handle or name, send to /me
-        if (!p?.handle || !p?.name) router.push('/me');
+        // Ensure a profile row exists
+        await supabase.from('profiles').upsert({ id: uid });
+
+        // Load profile
+        const { data: p } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', uid)
+          .maybeSingle();
+
+        setProfile(p || null);
+
+        // Onboarding: if missing basic info, nudge to /me
+        if (!p?.handle || !p?.name) {
+          if (router.pathname !== '/me') router.push('/me');
+        }
       }
     })();
 
@@ -32,11 +42,20 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       if (s) {
         const uid = s.user.id;
         await supabase.from('profiles').upsert({ id: uid });
-        const { data: p } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
-        setProfile(p);
-        if (!p?.handle || !p?.name) router.push('/me');
+        const { data: p } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', uid)
+          .maybeSingle();
+        setProfile(p || null);
+        if (!p?.handle || !p?.name) {
+          if (router.pathname !== '/me') router.push('/me');
+        }
+      } else {
+        setProfile(null);
       }
     });
+
     return () => sub.subscription.unsubscribe();
   }, [router]);
 
@@ -44,27 +63,32 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between p-4">
-        {/* Brand → clickable to home */}
-        <a href="/" className="font-semibold text-lg">someday</a>
+        {/* Brand → Home */}
+        <Link href="/" className="font-semibold text-lg">
+          someday
+        </Link>
 
-        {/* Right side: profile link / sign-in */}
+        {/* Right side */}
         <div className="flex items-center gap-3">
           {session ? (
             <>
-              <a
+              {/* Profile button → /me */}
+              <Link
                 href="/me"
                 className="inline-flex items-center gap-2 px-3 py-1 border rounded"
                 title="Edit profile"
               >
-                {/* simple avatar with initials */}
+                {/* Simple avatar/initial */}
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs">
                   {(profile?.name || session.user.email || '?')
                     .trim()[0]
                     ?.toUpperCase()}
                 </span>
                 <span className="text-sm">@{profile?.handle || 'profile'}</span>
-              </a>
+              </Link>
+
               <button
                 onClick={() => supabase.auth.signOut()}
                 className="px-3 py-1 border rounded"
@@ -88,6 +112,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
+      {/* Page content */}
       <div className="max-w-xl mx-auto">{children}</div>
     </div>
   );
