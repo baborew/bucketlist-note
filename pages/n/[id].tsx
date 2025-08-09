@@ -1,80 +1,99 @@
 // pages/n/[id].tsx
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
-import Comments from '../../components/Comments';
+import NoteCard from '../../components/NoteCard';
 
-type Note = {
-  id: string;
-  user_id: string;
-  type: 'Did' | 'Doing' | 'Want' | 'Someday';
-  content: string;
-  tags: string[] | null;
-  created_at: string;
-};
-
-type Profile = {
-  id: string;
-  name?: string | null;
-  handle?: string | null;
-};
-
-export default function NotePage() {
+export default function NoteThread() {
   const router = useRouter();
-  const { id } = router.query as { id?: string };
-  const [note, setNote] = useState<Note | null>(null);
-  const [author, setAuthor] = useState<Profile | null>(null);
+  const id = router.query.id as string | undefined;
+  const [note, setNote] = useState<any>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      // load note
-      const { data: n } = await supabase.from('notes').select('*').eq('id', id).maybeSingle();
-      if (!n) return;
-      setNote(n as Note);
-      // load author profile
-      const { data: p } = await supabase.from('profiles').select('*').eq('id', n.user_id).maybeSingle();
-      setAuthor(p as Profile);
+      // Load the note
+      const { data: n } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      setNote(n || null);
+
+      // Load comments
+      const { data: c } = await supabase
+        .from('comments')
+        .select('*, profiles(name, handle)')
+        .eq('note_id', id)
+        .order('created_at', { ascending: true });
+      setComments(c || []);
     })();
   }, [id]);
 
-  if (!id) return null;
+  async function postComment() {
+    if (!newComment.trim()) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return alert('Please sign in to comment.');
+
+    const { error } = await supabase.from('comments').insert({
+      note_id: id,
+      user_id: user.id,
+      content: newComment.trim(),
+    });
+    if (error) return alert(error.message);
+
+    setNewComment('');
+    // reload comments
+    const { data: c } = await supabase
+      .from('comments')
+      .select('*, profiles(name, handle)')
+      .eq('note_id', id)
+      .order('created_at', { ascending: true });
+    setComments(c || []);
+  }
+
+  if (!id) return <div className="p-4">Loading…</div>;
+  if (!note) return <div className="p-4">Note not found.</div>;
 
   return (
-    <div className="p-4">
-      <div className="mx-auto max-w-xl">
-        <Link href="/" className="text-sm text-blue-600">← Back to feed</Link>
+    <div className="p-4 max-w-xl mx-auto">
+      <button onClick={() => router.push('/')} className="text-sm text-blue-700 mb-3">
+        ← Back to feed
+      </button>
 
-        {!note ? (
-          <div className="mt-6 text-gray-500">Loading…</div>
-        ) : (
-          <div className="mt-4 rounded border p-4">
-            <div className="mb-2 text-xs uppercase tracking-wide text-gray-500">{note.type}</div>
-            <div className="whitespace-pre-wrap text-lg">{note.content}</div>
+      {/* The main note */}
+      <NoteCard note={note} showThreadLink={false} />
 
-            {note.tags && note.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {note.tags.map(t => (
-                  <span key={t} className="rounded bg-gray-100 px-2 py-1 text-xs">#{t}</span>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-              <div>
-                by{' '}
-                <Link href="/me" className="underline">
-                  {author?.name || 'Someone'}
-                </Link>
-              </div>
-              <div>{new Date(note.created_at).toLocaleString()}</div>
-            </div>
-
-            {/* Comments */}
-            <Comments noteId={note.id} />
+      {/* Comments section */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-2">Comments</h2>
+        {comments.length === 0 && <p className="text-sm text-gray-600">No comments yet.</p>}
+        {comments.map((c) => (
+          <div key={c.id} className="border-b py-2">
+            <p className="text-sm font-semibold">
+              {c.profiles?.name || 'User'} @{c.profiles?.handle || ''}
+            </p>
+            <p>{c.content}</p>
           </div>
-        )}
+        ))}
+
+        {/* Add comment */}
+        <div className="mt-3 flex gap-2">
+          <input
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Add a comment..."
+            className="flex-1 border rounded px-2 py-1 text-sm"
+          />
+          <button
+            onClick={postComment}
+            className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+          >
+            Post
+          </button>
+        </div>
       </div>
     </div>
   );
