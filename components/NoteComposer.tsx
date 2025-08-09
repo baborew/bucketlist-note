@@ -1,32 +1,92 @@
+// components/NoteComposer.tsx
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+
 export default function NoteComposer({ onPosted }: { onPosted?: () => void }) {
   const [type, setType] = useState<'Did'|'Doing'|'Want'>('Did');
   const [content, setContent] = useState('');
-  const [tags, setTags] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
   const [busy, setBusy] = useState(false);
-  async function postNote() {
-    if (!content.trim()) return; setBusy(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { alert('Sign in first'); setBusy(false); return; }
-    const { error } = await supabase.from('notes').insert({
-      user_id: user.id, type, content,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean), privacy: 'public'
-    });
-    setBusy(false); if (error) { alert(error.message); return; }
-    setContent(''); setTags(''); onPosted?.();
+  const [err, setErr] = useState<string | null>(null);
+
+  async function post() {
+    setErr(null);
+    if (!content.trim()) return;
+
+    setBusy(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setErr('Please sign in first.'); setBusy(false); return; }
+
+      // parse tags like: travel, spanish, 5k
+      const tags = tagsInput
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      const { error } = await supabase
+        .from('notes')
+        .insert({
+          user_id: user.id,
+          type,
+          content: content.trim(),
+          tags,
+          privacy: 'public',   // make it visible
+        });
+
+      if (error) throw error;
+
+      setContent('');
+      setTagsInput('');
+      setType('Did');
+      onPosted?.();
+    } catch (e: any) {
+      console.error(e);
+      setErr(e.message || 'Failed to post');
+      alert(e.message || 'Failed to post'); // so you see it immediately
+    } finally {
+      setBusy(false);
+    }
   }
+
   return (
     <div className="p-4 bg-white rounded-xl shadow">
       <div className="flex gap-2 mb-2">
-        <select value={type} onChange={e => setType(e.target.value as any)} className="border rounded px-2 py-1">
-          <option>Did</option><option>Doing</option><option>Want</option>
+        <select
+          value={type}
+          onChange={e => setType(e.target.value as any)}
+          className="border rounded px-2 py-1"
+        >
+          <option>Did</option>
+          <option>Doing</option>
+          <option>Want</option>
         </select>
-        <input value={tags} onChange={e => setTags(e.target.value)} placeholder="tags: travel, spanish, 5k" className="flex-1 border rounded px-2 py-1" />
+
+        <input
+          value={tagsInput}
+          onChange={e => setTagsInput(e.target.value)}
+          placeholder="tags: travel, spanish, 5k"
+          className="flex-1 border rounded px-2 py-1"
+        />
       </div>
-      <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Share something you did, are doing, or want to do…" className="w-full p-2 border rounded min-h-[90px]" />
-      <div className="mt-2 flex justify-end">
-        <button onClick={postNote} disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">{busy ? 'Posting…' : 'Post'}</button>
+
+      <textarea
+        value={content}
+        onChange={e => setContent(e.target.value)}
+        placeholder="Share something you did, are doing, or want to do..."
+        className="w-full border rounded px-3 py-2"
+        rows={3}
+      />
+
+      <div className="mt-2 flex items-center gap-3">
+        <button
+          onClick={post}
+          disabled={busy}
+          className="px-3 py-1 bg-blue-600 text-white rounded"
+        >
+          {busy ? 'Posting…' : 'Post'}
+        </button>
+        {err && <span className="text-sm text-red-600">{err}</span>}
       </div>
     </div>
   );
