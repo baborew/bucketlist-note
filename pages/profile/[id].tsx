@@ -23,8 +23,8 @@ export default function Profile() {
       setProfile(p || null);
 
       const { data: ns } = await supabase
-        .from('notes')
-        .select('*')
+         .from('notes')
+        .select('id,user_id,type,content,tags,created_at, profiles(name,handle,avatar_url)')
         .eq('user_id', id)
         .order('created_at', { ascending: false });
       setNotes(ns || []);
