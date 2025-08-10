@@ -4,58 +4,46 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import NoteCard from '../../components/NoteCard';
 
+type Note = {
+  id: string;
+  user_id: string;
+  type: string;
+  content: string;
+  tags?: string[];
+  created_at: string;
+};
+
 export default function NoteThread() {
   const router = useRouter();
   const id = router.query.id as string | undefined;
-  const [note, setNote] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState('');
+
+  const [note, setNote] = useState<Note | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      // Load the note
-      const { data: n } = await supabase
+      setLoading(true);
+      setErr(null);
+      const { data, error } = await supabase
         .from('notes')
-        .select('id,user_id,type,content,tags,created_at, profiles(name,handle,avatar_url)')
+        .select('*')
         .eq('id', id)
         .maybeSingle();
-      setNote(n || null);
 
-      // Load comments
-      const { data: c } = await supabase
-        .from('comments')
-        .select('*, profiles(name, handle)')
-        .eq('note_id', id)
-        .order('created_at', { ascending: true });
-      setComments(c || []);
+      if (error) {
+        console.error('thread load error:', error);
+        setErr(error.message || 'Failed to load');
+        setNote(null);
+      } else {
+        setNote((data as Note) || null);
+      }
+      setLoading(false);
     })();
   }, [id]);
 
-  async function postComment() {
-    if (!newComment.trim()) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return alert('Please sign in to comment.');
-
-    const { error } = await supabase.from('comments').insert({
-      note_id: id,
-      user_id: user.id,
-      content: newComment.trim(),
-    });
-    if (error) return alert(error.message);
-
-    setNewComment('');
-    // reload comments
-    const { data: c } = await supabase
-      .from('comments')
-      .select('*, profiles(name, handle)')
-      .eq('note_id', id)
-      .order('created_at', { ascending: true });
-    setComments(c || []);
-  }
-
   if (!id) return <div className="p-4">Loading…</div>;
-  if (!note) return <div className="p-4">Note not found.</div>;
 
   return (
     <div className="p-4 max-w-xl mx-auto">
@@ -63,38 +51,15 @@ export default function NoteThread() {
         ← Back to feed
       </button>
 
-      {/* The main note */}
-      <NoteCard note={note} showThreadLink={false} />
-
-      {/* Comments section */}
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold mb-2">Comments</h2>
-        {comments.length === 0 && <p className="text-sm text-gray-600">No comments yet.</p>}
-        {comments.map((c) => (
-          <div key={c.id} className="border-b py-2">
-            <p className="text-sm font-semibold">
-              {c.profiles?.name || 'User'} @{c.profiles?.handle || ''}
-            </p>
-            <p>{c.content}</p>
-          </div>
-        ))}
-
-        {/* Add comment */}
-        <div className="mt-3 flex gap-2">
-          <input
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            className="flex-1 border rounded px-2 py-1 text-sm"
-          />
-          <button
-            onClick={postComment}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-          >
-            Post
-          </button>
-        </div>
-      </div>
+      {err && <div className="text-sm text-red-600 mb-3">Error: {err}</div>}
+      {loading ? (
+        <div>Loading…</div>
+      ) : !note ? (
+        <div>Note not found.</div>
+      ) : (
+        // hide the “View threads →” link on this page
+        <NoteCard note={note} showThreadLink={false} />
+      )}
     </div>
   );
 }
