@@ -1,65 +1,107 @@
-// pages/n/[id].tsx
-import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
-import NoteCard from '../../components/NoteCard';
+// components/ReplyForm.tsx
+"use client";
 
-type Note = {
-  id: string;
-  user_id: string;
-  type: string;
-  content: string;
-  tags?: string[];
-  created_at: string;
+import { useState } from "react";
+// If you already have a central client, keep this import:
+import { supabase } from "../lib/supabaseClient"; 
+// If not, replace the above with:
+// import { createClient } from "@supabase/supabase-js";
+// const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
+type ReplyFormProps = {
+  // The note the user clicked "Reply" on (could be root or a reply)
+  replyingToId: string;
+  // Optional: refresh UI after posting
+  onPosted?: (newNoteId: string) => void;
+  // Optional: placeholder text
+  placeholder?: string;
 };
 
-export default function NoteThread() {
-  const router = useRouter();
-  const id = router.query.id as string | undefined;
+export default function ReplyForm({
+  replyingToId,
+  onPosted,
+  placeholder = "Write a reply…",
+}: ReplyFormProps) {
+  const [text, setText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [note, setNote] = useState<Note | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  async function getRootId(noteId: string): Promise<string> {
+    // Fetch the target note. If it’s a reply, it has thread_id = root.id
+    // If it’s a root post, thread_id should equal its own id.
+    const { data, error } = await supabase
+      .from("notes")
+      .select("id, thread_id")
+      .eq("id", noteId)
+      .single();
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      setLoading(true);
-      setErr(null);
-      const { data, error } = await supabase
-        .from('notes')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+    if (error || !data) throw error ?? new Error("Note not found");
+    return data.thread_id ?? data.id;
+  }
 
-      if (error) {
-        console.error('thread load error:', error);
-        setErr(error.message || 'Failed to load');
-        setNote(null);
-      } else {
-        setNote((data as Note) || null);
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+
+    setSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      // 1) Who’s posting?
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+      if (!user) {
+        throw new Error("You must be signed in to reply.");
       }
-      setLoading(false);
-    })();
-  }, [id]);
 
-  if (!id) return <div className="p-4">Loading…</div>;
+      // 2) Resolve the root id (works for replying to root OR to a reply)
+      const rootId = await getRootId(replyingToId);
+
+      // 3) Insert the reply with thread_id = ROOT ID (the key to make threads work)
+      const { data: inserted, error: insertErr } = await supabase
+        .from("notes")
+        .insert([
+          {
+            content: text.trim(),
+            type: "reply",
+            thread_id: rootId,  // <-- IMPORTANT
+            user_id: user.id,   // keep if your RLS requires explicit user_id
+          },
+        ])
+        .select("id")
+        .single();
+
+      if (insertErr) throw insertErr;
+
+      // 4) Reset & let parent refresh
+      setText("");
+      if (onPosted && inserted?.id) onPosted(inserted.id);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "Failed to post reply.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <div className="p-4 max-w-xl mx-auto">
-      <button onClick={() => router.push('/')} className="text-sm text-blue-700 mb-3">
-        ← Back to feed
-      </button>
-
-      {err && <div className="text-sm text-red-600 mb-3">Error: {err}</div>}
-      {loading ? (
-        <div>Loading…</div>
-      ) : !note ? (
-        <div>Note not found.</div>
-      ) : (
-        // hide the “View threads →” link on this page
-        <NoteCard note={note} showThreadLink={false} />
-      )}
-    </div>
+    <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2">
+      <textarea
+        className="w-full rounded-lg border p-3 text-sm focus:outline-none focus:ring"
+        rows={3}
+        placeholder={placeholder}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <div className="flex items-center justify-between">
+        {errorMsg ? <div className="text-red-600 text-sm">{errorMsg}</div> : <span />}
+        <button
+          type="submit"
+          disabled={submitting || !text.trim()}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-50"
+        >
+          {submitting ? "Posting…" : "Reply"}
+        </button>
+      </div>
+    </form>
   );
 }
