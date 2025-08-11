@@ -1,7 +1,7 @@
 // components/NoteCard.tsx
 import Link from 'next/link';
-import FollowButton from './FollowButton';
 import CheerButton from './CheerButton';
+import FollowButton from './FollowButton'; // if you don't have this file, remove this line and the component below
 
 type Profile = { name?: string; handle?: string; avatar_url?: string };
 type Note = {
@@ -10,24 +10,23 @@ type Note = {
   type: string;
   content: string;
   tags?: string[];
-  profiles?: Profile; // comes from the join
+  created_at?: string;
+  profiles?: Profile; // may be missing; code below handles that
 };
 
 export default function NoteCard({
   note,
-  showThreadLink = true,
+  showThreadLink = true, // hide on the thread page
 }: {
   note: Note;
   showThreadLink?: boolean;
 }) {
   const p = note.profiles || {};
-  const avatar =
-    p.avatar_url ||
-    'https://placehold.co/32x32?text=%20'; // tiny placeholder if none
+  const avatar = p.avatar_url || 'https://placehold.co/32x32?text=%20';
 
   return (
     <div className="p-4 bg-white rounded-xl shadow mb-4">
-      {/* Header: avatar + name/handle + type + Follow */}
+      {/* Header: avatar + name/handle on left, type + follow on right */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href={`/profile/${note.user_id}`} className="shrink-0">
@@ -49,6 +48,7 @@ export default function NoteCard({
 
         <div className="flex items-center gap-3">
           <div className="text-xs uppercase tracking-wide text-gray-500">{note.type}</div>
+          {/* Remove this <FollowButton> if you didn't add that component yet */}
           <FollowButton userId={note.user_id} />
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function NoteCard({
       {/* Tags */}
       {!!(note.tags && note.tags.length) && (
         <div className="mt-2 flex flex-wrap gap-2">
-          {note.tags.map((tag: string) => (
+          {note.tags.map((tag) => (
             <span key={tag} className="text-xs bg-gray-200 px-2 py-1 rounded">
               #{tag}
             </span>
@@ -67,7 +67,7 @@ export default function NoteCard({
         </div>
       )}
 
-      {/* Footer: cheers + View threads (optional) */}
+      {/* Footer: cheers + View threads (only if showThreadLink=true) */}
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
         {showThreadLink && (
