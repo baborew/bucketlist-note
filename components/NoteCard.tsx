@@ -71,9 +71,14 @@ export default function NoteCard({
       <div className="mt-3 flex items-center justify-between">
         <CheerButton noteId={note.id} />
         {showThreadLink && (
-          <Link href={`/n/${note.thread_id ?? note.id}`} className="text-sm text-blue-700">
-            View threads →
-          </Link>
+         // components/NoteCard.tsx (inside the card header or wherever you link)
+import Link from "next/link";
+
+const threadHref = `/threads/${note.thread_id ?? note.id}`;
+
+<Link href={threadHref} className="text-sm text-blue-600 hover:underline">
+  View thread
+</Link>
         )}
       </div>
     </div>
