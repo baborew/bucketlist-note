@@ -1,4 +1,42 @@
 // components/NoteCard.tsx
+import Link from "next/link";
+import SettingsMenu from "./SettingsMenu";
+
+type Note = {
+  id: string;
+  user_id?: string | null;
+  content: string;
+  created_at?: string;
+  thread_id?: string | null;
+  archived?: boolean | null;
+};
+
+export default function NoteCard({ note }: { note: Note }) {
+  // If this note is part of a thread, link to the root; otherwise link to itself
+  const threadHref = `/n/${note.thread_id ?? note.id}`;
+
+  return (
+    <div className="relative rounded-lg border p-4">
+      {/* ⋯ Settings button */}
+      <div className="absolute right-2 top-2">
+        <SettingsMenu noteId={note.id} />
+      </div>
+
+      {/* Content */}
+      <div className="pr-10">
+        <p className="whitespace-pre-wrap">{note.content}</p>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 text-sm">
+        <Link href={threadHref} className="text-blue-600 hover:underline">
+          View thread
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 import Link from 'next/link';
 import CheerButton from './CheerButton';
 import FollowButton from './FollowButton'; // if you don't have this file, remove this line and the component below
