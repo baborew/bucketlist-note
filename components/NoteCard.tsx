@@ -1,5 +1,40 @@
 // components/NoteCard.tsx
 import Link from "next/link";
+import CheerButton from "./CheerButton";
+import FollowButton from "./FollowButton"; // remove if you don't have it
+import SettingsMenu from "./SettingsMenu";
+
+type Profile = { name?: string; handle?: string; avatar_url?: string };
+type Note = {
+  id: string;
+  user_id: string;
+  type: string;
+  content: string;
+  tags?: string[];
+  created_at?: string;
+  profiles?: Profile;
+  thread_id?: string | null;
+  archived?: boolean | null;
+};
+
+export default function NoteCard({
+  note,
+  showThreadLink = true,
+}: {
+  note: Note;
+  showThreadLink?: boolean;
+}) {
+  const p = note.profiles || {};
+  const avatar = p.avatar_url || "https://placehold.co/32x32?text=%20";
+  const threadHref = `/n/${note.thread_id ?? note.id}`;
+
+  return (
+    <div className="p-4 bg-white rounded-xl shadow mb-4 relative">
+      {/* Header: avatar + name/handle */}
+      <div className="flex items-center justify-between">
+        <div className="flex item
+// components/NoteCard.tsx
+import Link from "next/link";
 import SettingsMenu from "./SettingsMenu";
 
 type Note = {
