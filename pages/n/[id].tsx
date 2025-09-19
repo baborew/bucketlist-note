@@ -1,116 +1,105 @@
 // pages/n/[id].tsx
-import { GetServerSideProps } from "next";
+import type { GetServerSideProps, NextPage } from "next";
 import Head from "next/head";
-import Link from "next/link";
+// If you're using @supabase/auth-helpers-nextjs:
 import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
+// If you're NOT using the helper, replace the line above with your own server client factory.
 
 type Note = {
   id: string;
   user_id: string | null;
-  content: string;
-  created_at: string | null;
-  thread_id: string | null;
+  type?: string | null;
+  content: string | null;
+  created_at?: string | null;
+  thread_id?: string | null;
   archived?: boolean | null;
+  // add any other columns you have
 };
 
-type Props = {
-  root: Note;
-  replies: Note[];
-};
+type Props =
+  | { note: Note; error?: undefined }
+  | { note?: undefined; error: string };
 
-export default function ThreadPage({ root, replies }: Props) {
+const ThreadPage: NextPage<Props> = ({ note, error }) => {
   return (
     <>
       <Head>
-        <title>Thread • {root.id.slice(0, 8)}</title>
+        <title>{error ? "Error • Thread" : `Thread • ${note.id.slice(0, 8)}`}</title>
       </Head>
-      <main className="max-w-2xl mx-auto p-4">
-        <Link href="/" className="text-sm text-blue-600 hover:underline">
-          ← Back
-        </Link>
 
-        {/* Root note */}
-        <article className="mt-3 rounded-xl border bg-white p-4 shadow-sm">
-          <div className="text-xs text-gray-500">
-            {root.created_at && new Date(root.created_at).toLocaleString()}
+      <main className="mx-auto max-w-2xl p-4">
+        <a href="/" className="text-sm text-blue-600 hover:underline">← Back</a>
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+            <div className="font-semibold mb-1">Error loading note</div>
+            <div className="text-sm">{error}</div>
+            <p className="mt-2 text-xs text-red-700">
+              (This message is temporary for debugging. Once it works, remove this error UI.)
+            </p>
           </div>
-          <p className="mt-2 whitespace-pre-wrap">{root.content}</p>
-        </article>
+        ) : !note ? (
+          <div className="mt-4 rounded-lg border p-4">Not found</div>
+        ) : (
+          <article className="mt-4 rounded-xl border bg-white p-4 shadow-sm">
+            <div className="text-xs text-gray-500">
+              {note.created_at &&
+                new Date(note.created_at).toLocaleString()}
+            </div>
+            <h1 className="mt-1 text-sm uppercase tracking-wide text-gray-500">
+              {note.type || "Note"}
+            </h1>
+            <p className="mt-2 whitespace-pre-wrap">{note.content}</p>
 
-        {/* Replies */}
-        <section className="mt-6 space-y-3">
-          {replies.length === 0 ? (
-            <div className="text-sm text-gray-500">No replies yet.</div>
-          ) : (
-            replies.map((n) => (
-              <article
-                key={n.id}
-                className="rounded-xl border bg-white p-4 shadow-sm"
-              >
-                <div className="text-xs text-gray-500">
-                  {n.created_at && new Date(n.created_at).toLocaleString()}
-                </div>
-                <p className="mt-2 whitespace-pre-wrap">{n.content}</p>
-              </article>
-            ))
-          )}
-        </section>
+            <pre className="mt-4 overflow-auto rounded bg-gray-50 p-3 text-xs text-gray-700">
+{JSON.stringify(note, null, 2)}
+            </pre>
+          </article>
+        )}
       </main>
     </>
   );
-}
+};
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const idParam = String(ctx.query.id);
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
+  const id = String(ctx.query.id || "");
 
-  // Attach user session for RLS-aware reads
+  // --- Create a server-side Supabase client that includes cookies/session ---
+  // If you aren't using the auth-helpers package, replace this with your own
+  // createServerClient(ctx) that forwards request cookies.
   const supabase = createServerSupabaseClient(ctx);
 
-  // 1) Try to load the note by the URL id
-  const { data: candidate, error: candidateErr } = await supabase
-    .from("notes")
+  // Try to fetch the note by the URL id
+  const { data, error } = await supabase
+    .from<Note>("notes")
     .select("*")
-    .eq("id", idParam)
+    .eq("id", id)
     .single();
 
-  if (candidateErr && candidateErr.code !== "PGRST116") {
-    // Any error other than "row not found" → surface a 500 for debugging
-    throw new Error(candidateErr.message);
+  if (error) {
+    // Log to your server console for diagnosis
+    console.error("Supabase error loading thread root:", {
+      code: (error as any).code,
+      message: error.message,
+      hint: (error as any).hint,
+      details: (error as any).details,
+      id,
+    });
+
+    // Show the error text on the page so you can distinguish 403/401 vs 404
+    return {
+      props: {
+        error: `${(error as any).code ?? "ERR"}: ${error.message}`,
+      },
+    };
   }
 
-  // 2) Resolve the "root id":
-  // - If the candidate exists and has thread_id, the root is thread_id.
-  // - If the candidate exists and has NO thread_id, the root is its own id.
-  // - If the candidate does not exist, treat the URL id as a potential root id.
-  const rootId = candidate ? candidate.thread_id ?? candidate.id : idParam;
-
-  // 3) Load the root note
-  const { data: root, error: rootErr } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("id", rootId)
-    .single();
-
-  // If we can't see the root, it's either not found or blocked by RLS
-  if (rootErr || !root) {
+  if (!data) {
+    // True "not found"
     return { notFound: true };
   }
 
-  // 4) Load replies that belong to this thread (exclude the root)
-  const { data: replies, error: repliesErr } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("thread_id", root.id)
-    .order("created_at", { ascending: true });
-
-  if (repliesErr) {
-    throw new Error(repliesErr.message);
-  }
-
-  return {
-    props: {
-      root,
-      replies: replies ?? [],
-    },
-  };
+  return { props: { note: data } };
 };
+
+export default ThreadPage;
