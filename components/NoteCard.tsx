@@ -1,7 +1,6 @@
 // components/NoteCard.tsx
 import Link from "next/link";
 
-/* ===== Types ===== */
 type Profile = { name?: string; handle?: string; avatar_url?: string };
 export type Note = {
   id: string;
@@ -23,7 +22,12 @@ export default function NoteCard({
   showThreadLink?: boolean;
 }) {
   return (
-    <div className="rounded-lg border bg-white shadow-sm">
+    <div className="rounded-lg border bg-white shadow-sm relative">
+      {/* BIG visible marker to prove this file is rendering */}
+      <div className="absolute -top-3 -left-3 bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded shadow">
+        NoteCard v3
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between p-4">
         <div className="min-w-0">
@@ -46,30 +50,16 @@ export default function NoteCard({
           </div>
         </div>
 
-        {/* SETTINGS (native details/summary so it always renders) */}
-        <details className="relative">
-          <summary
-            className="list-none cursor-pointer select-none rounded-full px-2 py-1 text-sm leading-none hover:bg-gray-100"
-            aria-label="Post settings"
+        {/* SUPER OBVIOUS SETTINGS BUTTON */}
+        <div className="shrink-0">
+          <Link
+            href={`/notes/${note.id}/settings`}
+            className="inline-block rounded-md border border-gray-300 px-3 py-1 text-sm font-medium hover:bg-gray-50"
+            data-testid={`settings-${note.id}`}
           >
-            ⚙️
-          </summary>
-          <div className="absolute right-0 mt-2 w-36 rounded-md border bg-white shadow-lg z-20">
-            {/* TODO: wire these to real actions (modal, server action, etc.) */}
-            <Link
-              href={`/notes/${note.id}/edit`}
-              className="block px-4 py-2 text-sm hover:bg-gray-100"
-            >
-              Edit
-            </Link>
-            <Link
-              href={`/notes/${note.id}/delete`}
-              className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </Link>
-          </div>
-        </details>
+            Settings
+          </Link>
+        </div>
       </div>
 
       {/* Body */}
